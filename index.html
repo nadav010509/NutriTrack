@@ -1,0 +1,1411 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="מחשבון תזונה">
+    <title>NutriTrack IL - מחשבון תזונה ומעקב ארוחות יומי</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Heebo & Assistant for clean Hebrew typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Heebo', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Heebo', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        /* Smooth circular gauge animation */
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.6s cubic-bezier(0.4, 0, 0.2, 1), stroke 0.3s ease;
+            transform: rotate(-90deg);
+            transform-origin: 50% 50%;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.4);
+            border-radius: 9999px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(156, 163, 175, 0.6);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in {
+            animation: fadeIn 0.25s ease-out forwards;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen transition-colors duration-300 pb-20">
+
+    <!-- Top Navigation Bar -->
+    <header class="sticky top-0 z-30 backdrop-blur-lg bg-white/80 dark:bg-slate-900/80 border-b border-slate-200 dark:border-slate-800 transition-colors">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25">
+                    <i data-lucide="flame" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="font-extrabold text-lg sm:text-xl tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600 dark:from-indigo-400 dark:to-purple-400">
+                        NutriTrack IL
+                    </h1>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">מחשבון תזונה ומעקב ערכים יומי</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Demo Meal Button -->
+                <button onclick="loadDemoDay()" title="טען תפריט לדוגמה" class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs sm:text-sm font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition">
+                    <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i>
+                    <span class="hidden md:inline">תפריט לדוגמה</span>
+                </button>
+
+                <!-- Edit Targets / TDEE Calculator Button -->
+                <button onclick="openTargetsModal()" class="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/70 text-indigo-600 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60 transition">
+                    <i data-lucide="target" class="w-4 h-4"></i>
+                    <span>הגדרת יעדים / BMR</span>
+                </button>
+
+                <!-- Reset Day Button -->
+                <button onclick="openResetModal()" title="איפוס יומי" class="p-2 rounded-xl bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 border border-rose-200/50 dark:border-rose-800/40 transition">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+                </button>
+
+                <!-- Dark/Light Mode Toggle -->
+                <button onclick="toggleTheme()" id="themeToggleBtn" aria-label="החלף ערכת נושא" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition">
+                    <i data-lucide="sun" class="w-4 h-4 sm:w-5 sm:h-5 hidden dark:block text-amber-400"></i>
+                    <i data-lucide="moon" class="w-4 h-4 sm:w-5 sm:h-5 block dark:hidden text-slate-700"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="max-w-6xl mx-auto px-4 sm:px-6 pt-6 space-y-8">
+
+        <!-- 1. DAILY TARGETS & PROGRESS DASHBOARD -->
+        <section class="bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-7 shadow-sm border border-slate-200/80 dark:border-slate-800 transition-colors">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/80">
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h2 class="text-xl font-bold">סיכום ערכים יומי</h2>
+                        <span id="goalPresetBadge" class="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300">
+                            מותאם אישית
+                        </span>
+                    </div>
+                    <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5" id="currentDateDisplay"></p>
+                </div>
+
+                <!-- Macro Ratio Pill -->
+                <div class="flex items-center gap-3 text-xs font-medium bg-slate-50 dark:bg-slate-800/70 px-3.5 py-2 rounded-2xl border border-slate-200/60 dark:border-slate-700/60 self-start sm:self-auto">
+                    <span class="text-slate-500 dark:text-slate-400">התפלגות קלורית:</span>
+                    <span class="flex items-center gap-1 text-emerald-600 dark:text-emerald-400"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>חלבון: <b id="ratioProtein">0%</b></span>
+                    <span class="flex items-center gap-1 text-amber-600 dark:text-amber-400"><span class="w-2 h-2 rounded-full bg-amber-500"></span>פחמימה: <b id="ratioCarbs">0%</b></span>
+                    <span class="flex items-center gap-1 text-rose-600 dark:text-rose-400"><span class="w-2 h-2 rounded-full bg-rose-500"></span>שומן: <b id="ratioFat">0%</b></span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
+                <!-- Circular Calorie Ring Gauge (Left/Right Main Card) -->
+                <div class="lg:col-span-5 flex flex-col sm:flex-row items-center justify-center sm:justify-around gap-6 bg-gradient-to-br from-slate-50 to-indigo-50/30 dark:from-slate-800/50 dark:to-indigo-950/20 p-5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
+                    <div class="relative w-44 h-44 flex items-center justify-center shrink-0">
+                        <svg class="w-full h-full" viewBox="0 0 160 160">
+                            <!-- Background Ring -->
+                            <circle class="text-slate-200 dark:text-slate-700/70" stroke-width="12" stroke="currentColor" fill="transparent" r="66" cx="80" cy="80"/>
+                            <!-- Animated Progress Ring -->
+                            <circle id="caloriesRing" class="progress-ring__circle text-indigo-600 dark:text-indigo-500" stroke-width="12" stroke-linecap="round" stroke="currentColor" fill="transparent" r="66" cx="80" cy="80" stroke-dasharray="414.69" stroke-dashoffset="414.69"/>
+                        </svg>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+                            <span class="text-xs font-medium text-slate-400 dark:text-slate-400">סה״כ נצרך</span>
+                            <span id="totalCaloriesDisplay" class="text-3xl font-black tracking-tight text-slate-900 dark:text-white mt-0.5">0</span>
+                            <span class="text-xs text-slate-500 dark:text-slate-400">מתוך <span id="targetCaloriesDisplay" class="font-semibold">2,200</span> קק״ל</span>
+                        </div>
+                    </div>
+
+                    <div class="flex sm:flex-col justify-around w-full sm:w-auto gap-4 text-center sm:text-right">
+                        <div class="bg-white dark:bg-slate-900/90 p-3.5 rounded-xl border border-slate-200/60 dark:border-slate-800 shadow-sm flex-1">
+                            <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">יתרה יומית</div>
+                            <div id="remainingCaloriesDisplay" class="text-xl font-extrabold text-indigo-600 dark:text-indigo-400">2,200</div>
+                            <div id="remainingStatusText" class="text-[11px] text-slate-400">קלוריות נותרו</div>
+                        </div>
+                        <div class="bg-white dark:bg-slate-900/90 p-3.5 rounded-xl border border-slate-200/60 dark:border-slate-800 shadow-sm flex-1">
+                            <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">אחוז ביצוע</div>
+                            <div id="caloriesPercentDisplay" class="text-xl font-extrabold text-slate-800 dark:text-slate-200">0%</div>
+                            <div class="text-[11px] text-slate-400">מהיעד היומי</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3 Macronutrient Cards (Protein, Carbs, Fat) -->
+                <div class="lg:col-span-7 grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <!-- Protein Card -->
+                    <div class="bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/70 dark:border-emerald-900/50 rounded-2xl p-4 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-bold text-emerald-800 dark:text-emerald-300 flex items-center gap-1.5">
+                                    <i data-lucide="dumbbell" class="w-4 h-4 text-emerald-600 dark:text-emerald-400"></i>
+                                    חלבון
+                                </span>
+                                <span id="proteinPercentBadge" class="text-xs font-bold px-2 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300">0%</span>
+                            </div>
+                            <div class="flex items-baseline gap-1 my-2">
+                                <span id="totalProteinDisplay" class="text-2xl font-black text-slate-900 dark:text-white">0</span>
+                                <span class="text-xs text-slate-500 dark:text-slate-400">/ <span id="targetProteinDisplay">160</span> גרם</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="w-full h-2.5 bg-emerald-200/60 dark:bg-slate-800 rounded-full overflow-hidden">
+                                <div id="proteinBar" class="h-full bg-emerald-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                            <p id="remainingProteinText" class="text-[11px] text-slate-500 dark:text-slate-400 mt-2">נותרו 160 גרם</p>
+                        </div>
+                    </div>
+
+                    <!-- Carbs Card -->
+                    <div class="bg-amber-50/50 dark:bg-amber-950/20 border border-amber-200/70 dark:border-amber-900/50 rounded-2xl p-4 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-bold text-amber-800 dark:text-amber-300 flex items-center gap-1.5">
+                                    <i data-lucide="wheat" class="w-4 h-4 text-amber-600 dark:text-amber-400"></i>
+                                    פחמימות
+                                </span>
+                                <span id="carbsPercentBadge" class="text-xs font-bold px-2 py-0.5 rounded-lg bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300">0%</span>
+                            </div>
+                            <div class="flex items-baseline gap-1 my-2">
+                                <span id="totalCarbsDisplay" class="text-2xl font-black text-slate-900 dark:text-white">0</span>
+                                <span class="text-xs text-slate-500 dark:text-slate-400">/ <span id="targetCarbsDisplay">220</span> גרם</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="w-full h-2.5 bg-amber-200/60 dark:bg-slate-800 rounded-full overflow-hidden">
+                                <div id="carbsBar" class="h-full bg-amber-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                            <p id="remainingCarbsText" class="text-[11px] text-slate-500 dark:text-slate-400 mt-2">נותרו 220 גרם</p>
+                        </div>
+                    </div>
+
+                    <!-- Fat Card -->
+                    <div class="bg-rose-50/50 dark:bg-rose-950/20 border border-rose-200/70 dark:border-rose-900/50 rounded-2xl p-4 flex flex-col justify-between">
+                        <div>
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-bold text-rose-800 dark:text-rose-300 flex items-center gap-1.5">
+                                    <i data-lucide="droplet" class="w-4 h-4 text-rose-600 dark:text-rose-400"></i>
+                                    שומן
+                                </span>
+                                <span id="fatPercentBadge" class="text-xs font-bold px-2 py-0.5 rounded-lg bg-rose-100 dark:bg-rose-900/60 text-rose-700 dark:text-rose-300">0%</span>
+                            </div>
+                            <div class="flex items-baseline gap-1 my-2">
+                                <span id="totalFatDisplay" class="text-2xl font-black text-slate-900 dark:text-white">0</span>
+                                <span class="text-xs text-slate-500 dark:text-slate-400">/ <span id="targetFatDisplay">70</span> גרם</span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="w-full h-2.5 bg-rose-200/60 dark:bg-slate-800 rounded-full overflow-hidden">
+                                <div id="fatBar" class="h-full bg-rose-500 rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                            <p id="remainingFatText" class="text-[11px] text-slate-500 dark:text-slate-400 mt-2">נותרו 70 גרם</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- MAIN WORKSPACE: Food Selector & Meal Logs -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+
+            <!-- RIGHT COLUMN (RTL): Food Database & Custom Food Adder (5 cols on desktop) -->
+            <aside class="lg:col-span-5 lg:sticky lg:top-24 bg-white dark:bg-slate-900 rounded-3xl p-5 sm:p-6 shadow-sm border border-slate-200/80 dark:border-slate-800">
+                <!-- Mode Tabs: Database Search vs Custom Entry -->
+                <div class="grid grid-cols-2 gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-2xl mb-5">
+                    <button id="tabDbBtn" onclick="switchAddMode('db')" class="py-2.5 px-3 rounded-xl text-sm font-bold transition bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm flex items-center justify-center gap-2">
+                        <i data-lucide="search" class="w-4 h-4"></i>
+                        <span>מאגר מזונות</span>
+                    </button>
+                    <button id="tabCustomBtn" onclick="switchAddMode('custom')" class="py-2.5 px-3 rounded-xl text-sm font-medium transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center gap-2">
+                        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                        <span>הזנה ידנית</span>
+                    </button>
+                </div>
+
+                <!-- Target Meal Selector (Shared) -->
+                <div class="mb-4">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">הוסף לארוחה:</label>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-2 gap-2" id="mealTargetButtons">
+                        <button type="button" onclick="selectTargetMeal('breakfast')" data-meal="breakfast" class="meal-select-btn flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-bold transition">
+                            <span>☀️</span> ארוחת בוקר
+                        </button>
+                        <button type="button" onclick="selectTargetMeal('lunch')" data-meal="lunch" class="meal-select-btn flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-bold transition">
+                            <span>🍲</span> ארוחת צהריים
+                        </button>
+                        <button type="button" onclick="selectTargetMeal('dinner')" data-meal="dinner" class="meal-select-btn flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-bold transition">
+                            <span>🌙</span> ארוחת ערב
+                        </button>
+                        <button type="button" onclick="selectTargetMeal('snacks')" data-meal="snacks" class="meal-select-btn flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-bold transition">
+                            <span>⚡</span> נשנושים / אימון
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PANEL A: Built-in Israeli & High-Protein Food Database -->
+                <div id="dbModePanel" class="space-y-4">
+                    <!-- Search input & Category filter -->
+                    <div class="space-y-2.5">
+                        <div class="relative">
+                            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute right-3.5 top-1/2 -translate-y-1/2"></i>
+                            <input type="text" id="foodSearchInput" oninput="renderFoodDatabaseList()" placeholder="חפש מזון (למשל: חזה עוף, קוטג', אורז, ביצה...)" class="w-full pr-10 pl-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+
+                        <!-- Category Chips -->
+                        <div class="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar" id="categoryFilterContainer">
+                            <button onclick="setFoodCategoryFilter('all')" data-cat="all" class="cat-chip shrink-0 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-600 text-white">הכל</button>
+                            <button onclick="setFoodCategoryFilter('protein')" data-cat="protein" class="cat-chip shrink-0 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">חלבון ובשר</button>
+                            <button onclick="setFoodCategoryFilter('dairy')" data-cat="dairy" class="cat-chip shrink-0 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">חלב וביצים</button>
+                            <button onclick="setFoodCategoryFilter('carbs')" data-cat="carbs" class="cat-chip shrink-0 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">פחמימות</button>
+                            <button onclick="setFoodCategoryFilter('fats')" data-cat="fats" class="cat-chip shrink-0 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">שומנים</button>
+                            <button onclick="setFoodCategoryFilter('veggies')" data-cat="veggies" class="cat-chip shrink-0 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">ירקות</button>
+                            <button onclick="setFoodCategoryFilter('custom')" data-cat="custom" class="cat-chip shrink-0 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">המזונות שלי</button>
+                        </div>
+                    </div>
+
+                    <!-- Scrollable Food Items List -->
+                    <div id="foodDatabaseList" class="max-h-60 overflow-y-auto space-y-1.5 pr-0.5 border border-slate-100 dark:border-slate-800 rounded-2xl p-2 bg-slate-50/50 dark:bg-slate-950/40">
+                        <!-- Populated dynamically via JS -->
+                    </div>
+
+                    <!-- Selected Food Quantity & Live Macro Preview Box -->
+                    <div id="selectedFoodConfigurator" class="bg-indigo-50/60 dark:bg-indigo-950/30 border border-indigo-200/80 dark:border-indigo-900/60 rounded-2xl p-4 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <span class="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 uppercase">פריט נבחר</span>
+                                <h4 id="selectedFoodName" class="font-extrabold text-base text-slate-900 dark:text-white">חזה עוף צלוי</h4>
+                            </div>
+                            <span id="selectedFoodBaseInfo" class="text-xs bg-white dark:bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300">
+                                ל-100 גרם
+                            </span>
+                        </div>
+
+                        <!-- Quantity Input + Unit Selector (Grams vs Units) -->
+                        <div class="grid grid-cols-12 gap-2 items-end">
+                            <div class="col-span-5">
+                                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">כמות</label>
+                                <input type="number" id="foodAmountInput" value="100" min="0.1" step="any" oninput="updateLiveFoodPreview()" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 font-bold text-center focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div class="col-span-7">
+                                <label class="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">יחידת מידה</label>
+                                <select id="foodUnitSelect" onchange="handleUnitModeChange()" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                    <option value="grams">גרם (g)</option>
+                                    <option value="unit" id="foodUnitOption">יחידה סטנדרטית</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Quick Amount Preset Buttons -->
+                        <div id="quickAmountPresets" class="flex flex-wrap gap-1.5">
+                            <!-- Dynamically filled for grams (50, 100, 150, 200) or units (0.5, 1, 2, 3) -->
+                        </div>
+
+                        <!-- Live Calculated Macros Preview -->
+                        <div class="bg-white dark:bg-slate-900 rounded-xl p-3 border border-indigo-100 dark:border-indigo-900/50 grid grid-cols-4 gap-2 text-center">
+                            <div>
+                                <div class="text-[11px] text-slate-400">קלוריות</div>
+                                <div id="previewCal" class="font-extrabold text-sm text-indigo-600 dark:text-indigo-400">165</div>
+                            </div>
+                            <div>
+                                <div class="text-[11px] text-slate-400">חלבון</div>
+                                <div id="previewPro" class="font-bold text-sm text-emerald-600 dark:text-emerald-400">31g</div>
+                            </div>
+                            <div>
+                                <div class="text-[11px] text-slate-400">פחמימה</div>
+                                <div id="previewCarb" class="font-bold text-sm text-amber-600 dark:text-amber-400">0g</div>
+                            </div>
+                            <div>
+                                <div class="text-[11px] text-slate-400">שומן</div>
+                                <div id="previewFat" class="font-bold text-sm text-rose-600 dark:text-rose-400">3.6g</div>
+                            </div>
+                        </div>
+
+                        <button onclick="addSelectedDbFoodToMeal()" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 active:scale-[0.99] text-white font-bold text-sm shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2 transition">
+                            <i data-lucide="plus" class="w-4 h-4"></i>
+                            <span>הוסף לארוחה</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- PANEL B: Custom Food Entry Form -->
+                <div id="customModePanel" class="hidden space-y-4">
+                    <div class="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200/70 dark:border-slate-800 space-y-3.5">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">שם המזון / המנה *</label>
+                            <input type="text" id="customFoodName" placeholder="למשל: שייק חלבון ביתי / חטיף אנרגיה" class="w-full px-3.5 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">תיאור כמות / מנה</label>
+                                <input type="text" id="customFoodPortion" value="מנה אחת" placeholder="100 גרם / יחידה" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-1">קלוריות (קק״ל) *</label>
+                                <input type="number" id="customFoodCal" placeholder="0" min="0" step="any" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2.5">
+                            <div>
+                                <label class="block text-xs font-bold text-emerald-600 dark:text-emerald-400 mb-1">חלבון (ג')</label>
+                                <input type="number" id="customFoodPro" placeholder="0" min="0" step="any" oninput="autoCalcCustomCalories()" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-amber-600 dark:text-amber-400 mb-1">פחמימה (ג')</label>
+                                <input type="number" id="customFoodCarb" placeholder="0" min="0" step="any" oninput="autoCalcCustomCalories()" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-rose-600 dark:text-rose-400 mb-1">שומן (ג')</label>
+                                <input type="number" id="customFoodFat" placeholder="0" min="0" step="any" oninput="autoCalcCustomCalories()" class="w-full px-3 py-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500">
+                            </div>
+                        </div>
+
+                        <p class="text-[11px] text-slate-400">💡 הקלוריות מחושבות אוטומטית לפי ערכי המאקרו (ניתן גם לערוך ידנית).</p>
+
+                        <label class="flex items-center gap-2.5 pt-1 cursor-pointer select-none">
+                            <input type="checkbox" id="saveCustomToDbCheckbox" checked class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500">
+                            <span class="text-xs font-medium text-slate-700 dark:text-slate-300">שמור פריט זה במאגר המזונות שלי לשימוש עתידי</span>
+                        </label>
+
+                        <button onclick="addCustomFoodToMeal()" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-sm shadow-md shadow-indigo-500/20 flex items-center justify-center gap-2 transition">
+                            <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                            <span>הוסף לארוחה הנבחרת</span>
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- LEFT COLUMN (RTL): 4 Meal Category Sections (7 cols on desktop) -->
+            <div class="lg:col-span-7 space-y-5" id="mealsContainer">
+                <!-- Rendered dynamically via JS: Breakfast, Lunch, Dinner, Snacks -->
+            </div>
+
+        </div>
+    </main>
+
+    <!-- MODAL 1: Daily Targets & BMR/TDEE Macro Calculator -->
+    <div id="targetsModal" class="fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-xl w-full p-6 shadow-2xl space-y-6 animate-fade-in my-8">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+                <div class="flex items-center gap-2.5">
+                    <div class="p-2 rounded-xl bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">
+                        <i data-lucide="sliders" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-extrabold">הגדרת יעדים יומיים ומחשבון TDEE</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">בחר מטרה מוכנה, חשב לפי נתונים אישיים או הזן ידנית</p>
+                    </div>
+                </div>
+                <button onclick="closeTargetsModal()" class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <!-- Quick Goal Presets -->
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-2">1. תבניות יעד מהירות:</label>
+                <div class="grid grid-cols-3 gap-2.5">
+                    <button onclick="applyGoalPreset('cut')" class="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-indigo-500 dark:hover:border-indigo-500 bg-slate-50 dark:bg-slate-800/60 text-right transition group">
+                        <div class="font-bold text-sm group-hover:text-indigo-600 dark:group-hover:text-indigo-400">🔥 חיטוב וירידה</div>
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">1,800 קק״ל • חלבון גבוה</div>
+                    </button>
+                    <button onclick="applyGoalPreset('maintain')" class="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-indigo-500 dark:hover:border-indigo-500 bg-slate-50 dark:bg-slate-800/60 text-right transition group">
+                        <div class="font-bold text-sm group-hover:text-indigo-600 dark:group-hover:text-indigo-400">⚖️ מאזן ניטרלי</div>
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">2,200 קק״ל • מאוזן</div>
+                    </button>
+                    <button onclick="applyGoalPreset('bulk')" class="p-3 rounded-2xl border border-slate-200 dark:border-slate-800 hover:border-indigo-500 dark:hover:border-indigo-500 bg-slate-50 dark:bg-slate-800/60 text-right transition group">
+                        <div class="font-bold text-sm group-hover:text-indigo-600 dark:group-hover:text-indigo-400">💪 עלייה במסה</div>
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">2,800 קק״ל • פחמימה וחלבון</div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Collapsible Smart BMR/TDEE Calculator -->
+            <div class="bg-indigo-50/50 dark:bg-indigo-950/20 border border-indigo-200/60 dark:border-indigo-900/50 rounded-2xl p-4 space-y-3">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-extrabold text-indigo-700 dark:text-indigo-300 flex items-center gap-1.5">
+                        <i data-lucide="calculator" class="w-4 h-4"></i>
+                        2. חישוב חכם לפי מדדי גוף (נוסחת Mifflin-St Jeor)
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">מין</label>
+                        <select id="calcGender" class="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-medium">
+                            <option value="male">גבר</option>
+                            <option value="female">אישה</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">גיל</label>
+                        <input type="number" id="calcAge" value="28" min="14" max="99" class="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">משקל (ק״ג)</label>
+                        <input type="number" id="calcWeight" value="75" min="35" max="250" class="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">גובה (ס״מ)</label>
+                        <input type="number" id="calcHeight" value="176" min="120" max="230" class="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-bold">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">רמת פעילות שבועית</label>
+                        <select id="calcActivity" class="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-medium">
+                            <option value="1.2">יושבני (ללא אימונים)</option>
+                            <option value="1.375">פעילות קלה (1-3 אימונים בשבוע)</option>
+                            <option value="1.55" selected>פעילות בינונית (3-5 אימונים בשבוע)</option>
+                            <option value="1.725">פעילות גבוהה (6-7 אימונים בשבוע)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-semibold text-slate-600 dark:text-slate-400 mb-1">מטרה תזונתית</label>
+                        <select id="calcGoalType" class="w-full px-2.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-xs font-medium">
+                            <option value="cut">חיטוב (-450 קק״ל)</option>
+                            <option value="maintain" selected>ניטרלי / שימור (TDEE)</option>
+                            <option value="bulk">מסה נקייה (+350 קק״ל)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button type="button" onclick="calculateSmartTDEE()" class="w-full py-2 rounded-xl bg-indigo-600/90 hover:bg-indigo-600 text-white text-xs font-bold transition flex items-center justify-center gap-1.5">
+                    <i data-lucide="wand-2" class="w-3.5 h-3.5"></i>
+                    <span>חשב והזן ערכים מומלצים לשדות למטה</span>
+                </button>
+            </div>
+
+            <!-- Direct Target Inputs -->
+            <div>
+                <label class="block text-xs font-bold uppercase text-slate-500 dark:text-slate-400 mb-2">3. יעדים יומיים נבחרים (ניתנים לעריכה חופשית):</label>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="bg-slate-50 dark:bg-slate-800/80 p-3 rounded-2xl border border-slate-200 dark:border-slate-700">
+                        <label class="block text-xs font-bold text-indigo-600 dark:text-indigo-400 mb-1">קלוריות (קק״ל)</label>
+                        <input type="number" id="inputTargetCalories" value="2200" min="800" max="10000" class="w-full bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 font-extrabold text-base">
+                    </div>
+                    <div class="bg-slate-50 dark:bg-slate-800/80 p-3 rounded-2xl border border-slate-200 dark:border-slate-700">
+                        <label class="block text-xs font-bold text-emerald-600 dark:text-emerald-400 mb-1">חלבון (גרם)</label>
+                        <input type="number" id="inputTargetProtein" value="160" min="20" max="600" class="w-full bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 font-extrabold text-base">
+                    </div>
+                    <div class="bg-slate-50 dark:bg-slate-800/80 p-3 rounded-2xl border border-slate-200 dark:border-slate-700">
+                        <label class="block text-xs font-bold text-amber-600 dark:text-amber-400 mb-1">פחמימות (גרם)</label>
+                        <input type="number" id="inputTargetCarbs" value="220" min="0" max="1000" class="w-full bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 font-extrabold text-base">
+                    </div>
+                    <div class="bg-slate-50 dark:bg-slate-800/80 p-3 rounded-2xl border border-slate-200 dark:border-slate-700">
+                        <label class="block text-xs font-bold text-rose-600 dark:text-rose-400 mb-1">שומן (גרם)</label>
+                        <input type="number" id="inputTargetFat" value="70" min="10" max="400" class="w-full bg-white dark:bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-300 dark:border-slate-700 font-extrabold text-base">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button onclick="closeTargetsModal()" class="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">ביטול</button>
+                <button onclick="saveDailyTargets()" class="px-6 py-2.5 rounded-xl text-sm font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20">שמור יעדים</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: Reset Confirmation Modal (No browser alert/confirm) -->
+    <div id="resetModal" class="fixed inset-0 z-50 hidden bg-slate-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4 animate-fade-in text-center">
+            <div class="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-950/70 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto">
+                <i data-lucide="trash-2" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-lg font-extrabold">איפוס רישום ארוחות יומי</h3>
+            <p class="text-sm text-slate-500 dark:text-slate-400">האם אתה בטוח שברצונך לנקות את כל הארוחות שנרשמו היום? היעדים האישיים והמזונות המותאמים שלך יישמרו.</p>
+            <div class="flex items-center justify-center gap-3 pt-2">
+                <button onclick="closeResetModal()" class="flex-1 py-2.5 rounded-xl font-semibold text-sm bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200">ביטול</button>
+                <button onclick="confirmResetDay()" class="flex-1 py-2.5 rounded-xl font-bold text-sm bg-rose-600 hover:bg-rose-700 text-white shadow-lg shadow-rose-500/20">כן, אפס יום</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toastContainer" class="fixed bottom-5 left-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <script>
+        /**************************************************************
+         * 1. BUILT-IN ISRAELI & HIGH-PROTEIN FOOD DATABASE
+         * Values are normalized per 100g, plus optional standard unit weight
+         **************************************************************/
+        const DEFAULT_FOOD_DB = [
+            // Protein & Meat
+            { id: 'chicken_breast', name: 'חזה עוף צלוי', category: 'protein', cal: 165, pro: 31, carb: 0, fat: 3.6, unitName: 'נתח בינוני (150 גרם)', unitGrams: 150 },
+            { id: 'salmon_fillet', name: 'פילה סלמון אפוי', category: 'protein', cal: 208, pro: 20.4, carb: 0, fat: 13.4, unitName: 'פילה אישי (180 גרם)', unitGrams: 180 },
+            { id: 'lean_beef', name: 'בקר רזה (פילה מדומה / סינטה)', category: 'protein', cal: 185, pro: 27.5, carb: 0, fat: 7.5, unitName: 'מנה (150 גרם)', unitGrams: 150 },
+            { id: 'tuna_water', name: 'טונה במים (מסוננת)', category: 'protein', cal: 116, pro: 25.5, carb: 0, fat: 0.8, unitName: 'קופסה מסוננת (112 גרם)', unitGrams: 112 },
+            { id: 'tofu_firm', name: 'טופו במרקם קשה', category: 'protein', cal: 144, pro: 15.5, carb: 2.8, fat: 8.7, unitName: 'שליש חבילה (100 גרם)', unitGrams: 100 },
+
+            // Dairy, Eggs & Protein Supplements
+            { id: 'egg_whole', name: 'ביצה שלמה (L)', category: 'dairy', cal: 143, pro: 12.6, carb: 0.7, fat: 9.5, unitName: 'יחידה אחת L (60 גרם)', unitGrams: 60, defaultMode: 'unit' },
+            { id: 'cottage_5', name: 'קוטג׳ 5%', category: 'dairy', cal: 95, pro: 11, carb: 1.5, fat: 5, unitName: 'גביע שלם (250 גרם)', unitGrams: 250 },
+            { id: 'protein_yogurt', name: 'יוגורט חלבון (PRO / GO)', category: 'dairy', cal: 76, pro: 10.5, carb: 5.2, fat: 1.4, unitName: 'גביע (200 גרם)', unitGrams: 200, defaultMode: 'unit' },
+            { id: 'whey_scoop', name: 'סקופ אבקת חלבון (מי גבינה)', category: 'dairy', cal: 385, pro: 78, carb: 6.5, fat: 5.2, unitName: 'סקופ מדידה (32 גרם)', unitGrams: 32, defaultMode: 'unit' },
+            { id: 'protein_pancake', name: 'פנקייק חלבון', category: 'dairy', cal: 195, pro: 18, carb: 22, fat: 3.8, unitName: 'יחידה בינונית (75 גרם)', unitGrams: 75, defaultMode: 'unit' },
+            { id: 'protein_icecream', name: 'גלידת חלבון ביתית', category: 'dairy', cal: 110, pro: 12, carb: 11, fat: 1.8, unitName: 'מנה / קערה (250 גרם)', unitGrams: 250, defaultMode: 'unit' },
+            { id: 'yellow_cheese_9', name: 'גבינה צהובה 9%', category: 'dairy', cal: 203, pro: 31, carb: 0.5, fat: 9, unitName: 'פרוסה אחת (25 גרם)', unitGrams: 25, defaultMode: 'unit' },
+
+            // Carbs & Grains
+            { id: 'white_rice', name: 'אורז לבן מבושל', category: 'carbs', cal: 130, pro: 2.7, carb: 28.2, fat: 0.3, unitName: 'כוס מבושלת (160 גרם)', unitGrams: 160 },
+            { id: 'sweet_potato', name: 'בטטה אפויה', category: 'carbs', cal: 90, pro: 2.0, carb: 20.7, fat: 0.2, unitName: 'בטטה בינונית (180 גרם)', unitGrams: 180 },
+            { id: 'oats_dry', name: 'שיבולת שועל (קוואקר)', category: 'carbs', cal: 379, pro: 13.2, carb: 67.7, fat: 6.5, unitName: 'כף גדושה (10 גרם)', unitGrams: 10 },
+            { id: 'light_bread', name: 'לחם קל / מלא', category: 'carbs', cal: 210, pro: 9.8, carb: 36, fat: 2.4, unitName: 'פרוסה אחת (28 גרם)', unitGrams: 28, defaultMode: 'unit' },
+            { id: 'banana', name: 'בננה', category: 'carbs', cal: 89, pro: 1.1, carb: 22.8, fat: 0.3, unitName: 'יחידה בינונית (115 גרם)', unitGrams: 115, defaultMode: 'unit' },
+            { id: 'pasta_cooked', name: 'פסטה מבושלת', category: 'carbs', cal: 157, pro: 5.8, carb: 30.7, fat: 0.9, unitName: 'כוס מבושלת (150 גרם)', unitGrams: 150 },
+
+            // Healthy Fats
+            { id: 'avocado', name: 'אבוקדו טרי', category: 'fats', cal: 160, pro: 2.0, carb: 8.5, fat: 14.7, unitName: 'חצי אבוקדו (75 גרם)', unitGrams: 75 },
+            { id: 'olive_oil', name: 'שמן זית כתית מעולה', category: 'fats', cal: 884, pro: 0, carb: 0, fat: 100, unitName: 'כף אחת (10 גרם)', unitGrams: 10, defaultMode: 'unit' },
+            { id: 'peanut_butter', name: 'חמאת בוטנים טבעית', category: 'fats', cal: 588, pro: 25, carb: 20, fat: 50, unitName: 'כף גדושה (20 גרם)', unitGrams: 20, defaultMode: 'unit' },
+            { id: 'almonds', name: 'שקדים טבעיים', category: 'fats', cal: 579, pro: 21.2, carb: 21.6, fat: 49.9, unitName: 'חופן קטן (25 גרם)', unitGrams: 25 },
+            { id: 'tahini_prepared', name: 'טחינה מוכנה', category: 'fats', cal: 340, pro: 10.5, carb: 7.5, fat: 30, unitName: 'כף (20 גרם)', unitGrams: 20, defaultMode: 'unit' },
+
+            // Veggies
+            { id: 'cherry_tomatoes', name: 'עגבניות שרי', category: 'veggies', cal: 18, pro: 0.9, carb: 3.9, fat: 0.2, unitName: 'חופן / 6 יח׳ (90 גרם)', unitGrams: 90 },
+            { id: 'lettuce', name: 'חסה ירוקה טרייה', category: 'veggies', cal: 15, pro: 1.4, carb: 2.9, fat: 0.2, unitName: 'קערת חסה (80 גרם)', unitGrams: 80 },
+            { id: 'cucumber', name: 'מלפפון ירוק', category: 'veggies', cal: 15, pro: 0.7, carb: 3.6, fat: 0.1, unitName: 'יחידה בינונית (100 גרם)', unitGrams: 100, defaultMode: 'unit' }
+        ];
+
+        const MEAL_DEFINITIONS = [
+            { key: 'breakfast', title: 'ארוחת בוקר', icon: '☀️', subtitle: 'פתיחת היום באנרגיה' },
+            { key: 'lunch', title: 'ארוחת צהריים', icon: '🍲', subtitle: 'ארוחה עיקרית מזינה' },
+            { key: 'dinner', title: 'ארוחת ערב', icon: '🌙', subtitle: 'סיום יום מאוזן ומשביע' },
+            { key: 'snacks', title: 'נשנושים / אחרי אימון', icon: '⚡', subtitle: 'השלמת חלבון ואנרגיה סביב האימון' }
+        ];
+
+        /**************************************************************
+         * 2. APPLICATION STATE & LOCAL STORAGE KEYS
+         **************************************************************/
+        const STORAGE_KEYS = {
+            TARGETS: 'nutritrack_il_targets_v1',
+            MEALS: 'nutritrack_il_meals_v1',
+            CUSTOM_DB: 'nutritrack_il_custom_db_v1',
+            THEME: 'nutritrack_il_theme_v1'
+        };
+
+        let state = {
+            targets: {
+                calories: 2200,
+                protein: 160,
+                carbs: 220,
+                fat: 70,
+                presetLabel: 'מאזן ניטרלי'
+            },
+            meals: {
+                breakfast: [],
+                lunch: [],
+                dinner: [],
+                snacks: []
+            },
+            customFoods: [],
+            ui: {
+                activeMeal: 'breakfast',
+                activeCategory: 'all',
+                selectedFoodId: 'chicken_breast',
+                addMode: 'db' // 'db' or 'custom'
+            }
+        };
+
+        /**************************************************************
+         * 3. INITIALIZATION & PERSISTENCE
+         **************************************************************/
+        window.addEventListener('DOMContentLoaded', () => {
+            loadStateFromStorage();
+            initTheme();
+            displayHebrewDate();
+            selectTargetMeal(state.ui.activeMeal);
+            renderFoodDatabaseList();
+            selectFoodFromDb(state.ui.selectedFoodId);
+            renderAll();
+            lucide.createIcons();
+        });
+
+        function loadStateFromStorage() {
+            try {
+                const savedTargets = localStorage.getItem(STORAGE_KEYS.TARGETS);
+                if (savedTargets) state.targets = { ...state.targets, ...JSON.parse(savedTargets) };
+
+                const savedMeals = localStorage.getItem(STORAGE_KEYS.MEALS);
+                if (savedMeals) state.meals = { ...state.meals, ...JSON.parse(savedMeals) };
+
+                const savedCustomFoods = localStorage.getItem(STORAGE_KEYS.CUSTOM_DB);
+                if (savedCustomFoods) state.customFoods = JSON.parse(savedCustomFoods);
+            } catch (e) {
+                console.error('Error loading state from LocalStorage:', e);
+            }
+        }
+
+        function saveStateToStorage() {
+            try {
+                localStorage.setItem(STORAGE_KEYS.TARGETS, JSON.stringify(state.targets));
+                localStorage.setItem(STORAGE_KEYS.MEALS, JSON.stringify(state.meals));
+                localStorage.setItem(STORAGE_KEYS.CUSTOM_DB, JSON.stringify(state.customFoods));
+            } catch (e) {
+                console.error('Error saving state to LocalStorage:', e);
+            }
+        }
+
+        function displayHebrewDate() {
+            const now = new Date();
+            const formatter = new Intl.DateTimeFormat('he-IL', {
+                weekday: 'long',
+                day: 'numeric',
+                month: 'long',
+                year: 'numeric'
+            });
+            document.getElementById('currentDateDisplay').textContent = formatter.format(now);
+        }
+
+        /**************************************************************
+         * 4. THEME MANAGEMENT (DARK / LIGHT)
+         **************************************************************/
+        function initTheme() {
+            const savedTheme = localStorage.getItem(STORAGE_KEYS.THEME) || 'dark';
+            if (savedTheme === 'dark') {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+
+        function toggleTheme() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem(STORAGE_KEYS.THEME, isDark ? 'dark' : 'light');
+        }
+
+        /**************************************************************
+         * 5. FOOD DATABASE & LIVE PREVIEW LOGIC
+         **************************************************************/
+        function getAllFoods() {
+            return [...DEFAULT_FOOD_DB, ...state.customFoods];
+        }
+
+        function setFoodCategoryFilter(cat) {
+            state.ui.activeCategory = cat;
+            document.querySelectorAll('.cat-chip').forEach(btn => {
+                if (btn.dataset.cat === cat) {
+                    btn.className = 'cat-chip shrink-0 px-3 py-1 rounded-full text-xs font-semibold bg-indigo-600 text-white transition';
+                } else {
+                    btn.className = 'cat-chip shrink-0 px-3 py-1 rounded-full text-xs font-medium bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition';
+                }
+            });
+            renderFoodDatabaseList();
+        }
+
+        function renderFoodDatabaseList() {
+            const query = (document.getElementById('foodSearchInput').value || '').trim().toLowerCase();
+            const listContainer = document.getElementById('foodDatabaseList');
+            const allFoods = getAllFoods();
+
+            const filtered = allFoods.filter(item => {
+                const matchesCat = state.ui.activeCategory === 'all' || item.category === state.ui.activeCategory;
+                const matchesQuery = !query || item.name.toLowerCase().includes(query);
+                return matchesCat && matchesQuery;
+            });
+
+            if (filtered.length === 0) {
+                listContainer.innerHTML = `
+                    <div class="text-center py-8 text-slate-400 text-xs">
+                        לא נמצאו מזונות תואמים לחיפוש שלך. ניתן להוסיף מזון חדש בלשונית "הזנה ידנית".
+                    </div>
+                `;
+                return;
+            }
+
+            listContainer.innerHTML = filtered.map(food => {
+                const isSelected = food.id === state.ui.selectedFoodId;
+                return `
+                    <div onclick="selectFoodFromDb('${food.id}')" class="cursor-pointer p-2.5 rounded-xl border transition flex items-center justify-between gap-2 ${
+                        isSelected
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm'
+                            : 'bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800/80 border-slate-200/70 dark:border-slate-800'
+                    }">
+                        <div class="min-w-0">
+                            <div class="font-bold text-sm truncate flex items-center gap-1.5">
+                                <span>${food.name}</span>
+                                ${food.isCustom ? `<span class="text-[10px] px-1.5 py-0.2 rounded bg-purple-500/20 ${isSelected ? 'text-white' : 'text-purple-500'}">אישי</span>` : ''}
+                            </div>
+                            <div class="text-[11px] ${isSelected ? 'text-indigo-100' : 'text-slate-400'}">
+                                ל-100ג׳: ${Math.round(food.cal)} קק״ל • ח: ${food.pro}ג׳ • פ: ${food.carb}ג׳ • ש: ${food.fat}ג׳
+                            </div>
+                        </div>
+                        <div class="shrink-0 flex items-center gap-1">
+                            ${food.isCustom ? `
+                                <button onclick="event.stopPropagation(); deleteCustomFoodFromDb('${food.id}')" title="מחק מהמאגר האישי" class="p-1 rounded-lg hover:bg-rose-500/20 ${isSelected ? 'text-white' : 'text-rose-400'}">
+                                    <i data-lucide="trash" class="w-3.5 h-3.5"></i>
+                                </button>
+                            ` : ''}
+                            <i data-lucide="chevron-left" class="w-4 h-4 ${isSelected ? 'text-white' : 'text-slate-400'}"></i>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            lucide.createIcons();
+        }
+
+        function selectFoodFromDb(foodId) {
+            const allFoods = getAllFoods();
+            const food = allFoods.find(f => f.id === foodId) || allFoods[0];
+            if (!food) return;
+
+            state.ui.selectedFoodId = food.id;
+            document.getElementById('selectedFoodName').textContent = food.name;
+
+            const unitSelect = document.getElementById('foodUnitSelect');
+            const unitOption = document.getElementById('foodUnitOption');
+
+            if (food.unitName && food.unitGrams) {
+                unitOption.textContent = food.unitName;
+                unitOption.disabled = false;
+                unitSelect.value = food.defaultMode === 'unit' ? 'unit' : 'grams';
+            } else {
+                unitOption.textContent = 'יחידה (100 גרם)';
+                unitSelect.value = 'grams';
+            }
+
+            handleUnitModeChange();
+            renderFoodDatabaseList();
+        }
+
+        function handleUnitModeChange() {
+            const mode = document.getElementById('foodUnitSelect').value;
+            const amountInput = document.getElementById('foodAmountInput');
+            const presetsContainer = document.getElementById('quickAmountPresets');
+            const food = getAllFoods().find(f => f.id === state.ui.selectedFoodId);
+
+            if (mode === 'unit') {
+                amountInput.value = 1;
+                amountInput.step = 0.5;
+                document.getElementById('selectedFoodBaseInfo').textContent = food?.unitName || 'לפי יחידה';
+                const unitPresets = [0.5, 1, 1.5, 2, 3];
+                presetsContainer.innerHTML = unitPresets.map(val => `
+                    <button type="button" onclick="setQuickFoodAmount(${val})" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 border border-indigo-200 dark:border-slate-700 hover:bg-indigo-600 hover:text-white transition">
+                        ${val === 0.5 ? 'חצי יח׳' : val + ' יח׳'}
+                    </button>
+                `).join('');
+            } else {
+                amountInput.value = 100;
+                amountInput.step = 10;
+                document.getElementById('selectedFoodBaseInfo').textContent = 'ערכים ל-100 גרם';
+                const gramPresets = [30, 50, 100, 150, 200, 250];
+                presetsContainer.innerHTML = gramPresets.map(val => `
+                    <button type="button" onclick="setQuickFoodAmount(${val})" class="px-2.5 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-slate-800 border border-indigo-200 dark:border-slate-700 hover:bg-indigo-600 hover:text-white transition">
+                        ${val} גרם
+                    </button>
+                `).join('');
+            }
+
+            updateLiveFoodPreview();
+        }
+
+        function setQuickFoodAmount(val) {
+            document.getElementById('foodAmountInput').value = val;
+            updateLiveFoodPreview();
+        }
+
+        function getCalculatedSelectedFoodMacros() {
+            const food = getAllFoods().find(f => f.id === state.ui.selectedFoodId);
+            if (!food) return null;
+
+            const rawAmount = parseFloat(document.getElementById('foodAmountInput').value) || 0;
+            const mode = document.getElementById('foodUnitSelect').value;
+
+            let totalGrams = rawAmount;
+            let displayQuantityText = `${rawAmount} גרם`;
+
+            if (mode === 'unit') {
+                const unitWeight = food.unitGrams || 100;
+                totalGrams = rawAmount * unitWeight;
+                displayQuantityText = `${rawAmount} יח׳ (${Math.round(totalGrams)} גרם)`;
+            }
+
+            const ratio = totalGrams / 100;
+            return {
+                name: food.name,
+                portionText: displayQuantityText,
+                cal: Math.round(food.cal * ratio),
+                pro: +(food.pro * ratio).toFixed(1),
+                carb: +(food.carb * ratio).toFixed(1),
+                fat: +(food.fat * ratio).toFixed(1)
+            };
+        }
+
+        function updateLiveFoodPreview() {
+            const calc = getCalculatedSelectedFoodMacros();
+            if (!calc) return;
+
+            document.getElementById('previewCal').textContent = calc.cal;
+            document.getElementById('previewPro').textContent = `${calc.pro}g`;
+            document.getElementById('previewCarb').textContent = `${calc.carb}g`;
+            document.getElementById('previewFat').textContent = `${calc.fat}g`;
+        }
+
+        function addSelectedDbFoodToMeal() {
+            const calc = getCalculatedSelectedFoodMacros();
+            if (!calc || calc.cal <= 0 && calc.pro <= 0 && calc.carb <= 0 && calc.fat <= 0) {
+                showToast('אנא הזן כמות חוקית הגדולה מ-0', 'error');
+                return;
+            }
+
+            const mealKey = state.ui.activeMeal;
+            state.meals[mealKey].push({
+                id: 'entry_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+                name: calc.name,
+                portion: calc.portionText,
+                cal: calc.cal,
+                pro: calc.pro,
+                carb: calc.carb,
+                fat: calc.fat
+            });
+
+            saveStateToStorage();
+            renderAll();
+            const mealObj = MEAL_DEFINITIONS.find(m => m.key === mealKey);
+            showToast(`נוסף "${calc.name}" אל ${mealObj.title}`);
+        }
+
+        /**************************************************************
+         * 6. CUSTOM FOOD ENTRY LOGIC
+         **************************************************************/
+        function switchAddMode(mode) {
+            state.ui.addMode = mode;
+            const dbPanel = document.getElementById('dbModePanel');
+            const customPanel = document.getElementById('customModePanel');
+            const tabDbBtn = document.getElementById('tabDbBtn');
+            const tabCustomBtn = document.getElementById('tabCustomBtn');
+
+            if (mode === 'db') {
+                dbPanel.classList.remove('hidden');
+                customPanel.classList.add('hidden');
+                tabDbBtn.className = 'py-2.5 px-3 rounded-xl text-sm font-bold transition bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm flex items-center justify-center gap-2';
+                tabCustomBtn.className = 'py-2.5 px-3 rounded-xl text-sm font-medium transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center gap-2';
+            } else {
+                dbPanel.classList.add('hidden');
+                customPanel.classList.remove('hidden');
+                tabCustomBtn.className = 'py-2.5 px-3 rounded-xl text-sm font-bold transition bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm flex items-center justify-center gap-2';
+                tabDbBtn.className = 'py-2.5 px-3 rounded-xl text-sm font-medium transition text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white flex items-center justify-center gap-2';
+            }
+        }
+
+        function autoCalcCustomCalories() {
+            const pro = parseFloat(document.getElementById('customFoodPro').value) || 0;
+            const carb = parseFloat(document.getElementById('customFoodCarb').value) || 0;
+            const fat = parseFloat(document.getElementById('customFoodFat').value) || 0;
+            const estimatedCal = Math.round((pro * 4) + (carb * 4) + (fat * 9));
+            if (estimatedCal > 0) {
+                document.getElementById('customFoodCal').value = estimatedCal;
+            }
+        }
+
+        function addCustomFoodToMeal() {
+            const name = document.getElementById('customFoodName').value.trim();
+            const portion = document.getElementById('customFoodPortion').value.trim() || 'מנה';
+            const cal = parseFloat(document.getElementById('customFoodCal').value) || 0;
+            const pro = parseFloat(document.getElementById('customFoodPro').value) || 0;
+            const carb = parseFloat(document.getElementById('customFoodCarb').value) || 0;
+            const fat = parseFloat(document.getElementById('customFoodFat').value) || 0;
+            const saveToDb = document.getElementById('saveCustomToDbCheckbox').checked;
+
+            if (!name) {
+                showToast('אנא הזן את שם המזון', 'error');
+                return;
+            }
+
+            const mealKey = state.ui.activeMeal;
+            state.meals[mealKey].push({
+                id: 'entry_' + Date.now(),
+                name,
+                portion,
+                cal: Math.round(cal),
+                pro: +pro.toFixed(1),
+                carb: +carb.toFixed(1),
+                fat: +fat.toFixed(1)
+            });
+
+            if (saveToDb) {
+                const customId = 'custom_' + Date.now();
+                state.customFoods.push({
+                    id: customId,
+                    name,
+                    category: 'custom',
+                    cal: Math.round(cal),
+                    pro: +pro.toFixed(1),
+                    carb: +carb.toFixed(1),
+                    fat: +fat.toFixed(1),
+                    unitName: portion,
+                    unitGrams: 100,
+                    defaultMode: 'unit',
+                    isCustom: true
+                });
+                renderFoodDatabaseList();
+            }
+
+            // Reset custom fields
+            document.getElementById('customFoodName').value = '';
+            document.getElementById('customFoodCal').value = '';
+            document.getElementById('customFoodPro').value = '';
+            document.getElementById('customFoodCarb').value = '';
+            document.getElementById('customFoodFat').value = '';
+
+            saveStateToStorage();
+            renderAll();
+            showToast(`"${name}" נוסף בהצלחה!`);
+        }
+
+        function deleteCustomFoodFromDb(customId) {
+            state.customFoods = state.customFoods.filter(f => f.id !== customId);
+            if (state.ui.selectedFoodId === customId) {
+                state.ui.selectedFoodId = DEFAULT_FOOD_DB[0].id;
+            }
+            saveStateToStorage();
+            renderFoodDatabaseList();
+            showToast('הפריט הוסר מהמאגר האישי');
+        }
+
+        /**************************************************************
+         * 7. MEAL SELECTION, RENDERING & DELETION
+         **************************************************************/
+        function selectTargetMeal(mealKey) {
+            state.ui.activeMeal = mealKey;
+            document.querySelectorAll('.meal-select-btn').forEach(btn => {
+                if (btn.dataset.meal === mealKey) {
+                    btn.className = 'meal-select-btn flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-bold transition bg-indigo-600 text-white border-indigo-600 shadow-sm';
+                } else {
+                    btn.className = 'meal-select-btn flex items-center gap-2 px-3 py-2.5 rounded-xl border text-xs font-bold transition bg-slate-50 dark:bg-slate-800/80 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-400';
+                }
+            });
+            renderMealsSections();
+        }
+
+        function removeEntryFromMeal(mealKey, entryId) {
+            state.meals[mealKey] = state.meals[mealKey].filter(item => item.id !== entryId);
+            saveStateToStorage();
+            renderAll();
+        }
+
+        function duplicateEntryInMeal(mealKey, entryId) {
+            const orig = state.meals[mealKey].find(item => item.id === entryId);
+            if (!orig) return;
+            state.meals[mealKey].push({
+                ...orig,
+                id: 'entry_' + Date.now() + '_' + Math.random().toString(36).slice(2, 5)
+            });
+            saveStateToStorage();
+            renderAll();
+            showToast(`שוכפל: ${orig.name}`);
+        }
+
+        function renderAll() {
+            renderDashboardProgress();
+            renderMealsSections();
+            lucide.createIcons();
+        }
+
+        function renderDashboardProgress() {
+            let totalCal = 0, totalPro = 0, totalCarb = 0, totalFat = 0;
+
+            Object.values(state.meals).forEach(mealArr => {
+                mealArr.forEach(item => {
+                    totalCal += Number(item.cal) || 0;
+                    totalPro += Number(item.pro) || 0;
+                    totalCarb += Number(item.carb) || 0;
+                    totalFat += Number(item.fat) || 0;
+                });
+            });
+
+            totalCal = Math.round(totalCal);
+            totalPro = +totalPro.toFixed(1);
+            totalCarb = +totalCarb.toFixed(1);
+            totalFat = +totalFat.toFixed(1);
+
+            const tCal = state.targets.calories || 2000;
+            const tPro = state.targets.protein || 150;
+            const tCarb = state.targets.carbs || 200;
+            const tFat = state.targets.fat || 65;
+
+            document.getElementById('goalPresetBadge').textContent = state.targets.presetLabel || 'מותאם אישית';
+
+            // Calories ring & numbers
+            document.getElementById('totalCaloriesDisplay').textContent = totalCal.toLocaleString();
+            document.getElementById('targetCaloriesDisplay').textContent = tCal.toLocaleString();
+
+            const calDiff = tCal - totalCal;
+            const remCalEl = document.getElementById('remainingCaloriesDisplay');
+            const remStatusEl = document.getElementById('remainingStatusText');
+
+            if (calDiff >= 0) {
+                remCalEl.textContent = calDiff.toLocaleString();
+                remCalEl.className = 'text-xl font-extrabold text-indigo-600 dark:text-indigo-400';
+                remStatusEl.textContent = 'קלוריות נותרו ליעד';
+            } else {
+                remCalEl.textContent = '+' + Math.abs(calDiff).toLocaleString();
+                remCalEl.className = 'text-xl font-extrabold text-rose-500';
+                remStatusEl.textContent = 'חריגה מהיעד היומי';
+            }
+
+            const calPct = Math.round((totalCal / tCal) * 100);
+            document.getElementById('caloriesPercentDisplay').textContent = `${calPct}%`;
+
+            // Ring SVG circumference = 2 * PI * 66 ≈ 414.69
+            const circumference = 414.69;
+            const clampedCalPct = Math.min(calPct, 100);
+            const offset = circumference - (clampedCalPct / 100) * circumference;
+            const ringEl = document.getElementById('caloriesRing');
+            ringEl.style.strokeDashoffset = offset;
+            if (calPct > 105) {
+                ringEl.classList.replace('text-indigo-600', 'text-rose-500');
+            } else {
+                ringEl.classList.replace('text-rose-500', 'text-indigo-600');
+            }
+
+            // Protein Progress
+            const proPct = Math.round((totalPro / tPro) * 100);
+            document.getElementById('totalProteinDisplay').textContent = totalPro;
+            document.getElementById('targetProteinDisplay').textContent = tPro;
+            document.getElementById('proteinPercentBadge').textContent = `${proPct}%`;
+            document.getElementById('proteinBar').style.width = `${Math.min(proPct, 100)}%`;
+            const remPro = +(tPro - totalPro).toFixed(1);
+            document.getElementById('remainingProteinText').textContent = remPro >= 0 ? `נותרו ${remPro} גרם ליעד` : `עברת ב-${Math.abs(remPro)} גרם`;
+
+            // Carbs Progress
+            const carbPct = Math.round((totalCarb / tCarb) * 100);
+            document.getElementById('totalCarbsDisplay').textContent = totalCarb;
+            document.getElementById('targetCarbsDisplay').textContent = tCarb;
+            document.getElementById('carbsPercentBadge').textContent = `${carbPct}%`;
+            document.getElementById('carbsBar').style.width = `${Math.min(carbPct, 100)}%`;
+            const remCarb = +(tCarb - totalCarb).toFixed(1);
+            document.getElementById('remainingCarbsText').textContent = remCarb >= 0 ? `נותרו ${remCarb} גרם ליעד` : `עברת ב-${Math.abs(remCarb)} גרם`;
+
+            // Fat Progress
+            const fatPct = Math.round((totalFat / tFat) * 100);
+            document.getElementById('totalFatDisplay').textContent = totalFat;
+            document.getElementById('targetFatDisplay').textContent = tFat;
+            document.getElementById('fatPercentBadge').textContent = `${fatPct}%`;
+            document.getElementById('fatBar').style.width = `${Math.min(fatPct, 100)}%`;
+            const remFat = +(tFat - totalFat).toFixed(1);
+            document.getElementById('remainingFatText').textContent = remFat >= 0 ? `נותרו ${remFat} גרם ליעד` : `עברת ב-${Math.abs(remFat)} גרם`;
+
+            // Caloric Macro Distribution Ratios
+            const macroCals = (totalPro * 4) + (totalCarb * 4) + (totalFat * 9);
+            if (macroCals > 0) {
+                document.getElementById('ratioProtein').textContent = Math.round(((totalPro * 4) / macroCals) * 100) + '%';
+                document.getElementById('ratioCarbs').textContent = Math.round(((totalCarb * 4) / macroCals) * 100) + '%';
+                document.getElementById('ratioFat').textContent = Math.round(((totalFat * 9) / macroCals) * 100) + '%';
+            } else {
+                document.getElementById('ratioProtein').textContent = '0%';
+                document.getElementById('ratioCarbs').textContent = '0%';
+                document.getElementById('ratioFat').textContent = '0%';
+            }
+        }
+
+        function renderMealsSections() {
+            const container = document.getElementById('mealsContainer');
+            container.innerHTML = MEAL_DEFINITIONS.map(mealDef => {
+                const items = state.meals[mealDef.key] || [];
+                const isActiveTarget = state.ui.activeMeal === mealDef.key;
+
+                // Calculate Meal Subtotals
+                const mCal = Math.round(items.reduce((s, i) => s + (Number(i.cal) || 0), 0));
+                const mPro = +items.reduce((s, i) => s + (Number(i.pro) || 0), 0).toFixed(1);
+                const mCarb = +items.reduce((s, i) => s + (Number(i.carb) || 0), 0).toFixed(1);
+                const mFat = +items.reduce((s, i) => s + (Number(i.fat) || 0), 0).toFixed(1);
+
+                return `
+                    <div class="bg-white dark:bg-slate-900 rounded-3xl p-5 shadow-sm border transition-all ${
+                        isActiveTarget
+                            ? 'border-indigo-500/80 dark:border-indigo-500/70 ring-2 ring-indigo-500/10'
+                            : 'border-slate-200/80 dark:border-slate-800'
+                    }">
+                        <!-- Meal Header & Summary -->
+                        <div class="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800">
+                            <div class="flex items-center gap-3 cursor-pointer" onclick="selectTargetMeal('${mealDef.key}')">
+                                <div class="w-11 h-11 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xl">
+                                    ${mealDef.icon}
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <h3 class="font-extrabold text-base sm:text-lg">${mealDef.title}</h3>
+                                        ${isActiveTarget ? `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">נבחר להוספה</span>` : ''}
+                                    </div>
+                                    <p class="text-xs text-slate-400">${mealDef.subtitle}</p>
+                                </div>
+                            </div>
+
+                            <!-- Meal Macros Summary Pills -->
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="px-2.5 py-1 rounded-xl text-xs font-extrabold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-300">
+                                    ${mCal} קק״ל
+                                </span>
+                                <span class="px-2 py-1 rounded-xl text-xs font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300">
+                                    ח: ${mPro}ג׳
+                                </span>
+                                <span class="px-2 py-1 rounded-xl text-xs font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300">
+                                    פ: ${mCarb}ג׳
+                                </span>
+                                <span class="px-2 py-1 rounded-xl text-xs font-bold bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300">
+                                    ש: ${mFat}ג׳
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Meal Items List -->
+                        <div class="mt-4 space-y-2">
+                            ${items.length === 0 ? `
+                                <div onclick="selectTargetMeal('${mealDef.key}')" class="cursor-pointer py-6 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl text-center text-xs text-slate-400 hover:border-indigo-400 dark:hover:border-indigo-600 transition">
+                                    טרם נוספו מזונות ל${mealDef.title}. לחץ לבחירת ארוחה זו והוסף פריטים מהמאגר מימין.
+                                </div>
+                            ` : items.map(item => `
+                                <div class="group flex items-center justify-between gap-3 p-3 rounded-2xl bg-slate-50/80 dark:bg-slate-800/40 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 border border-slate-200/50 dark:border-slate-800 transition animate-fade-in">
+                                    <div class="min-w-0 flex-1">
+                                        <div class="font-bold text-sm text-slate-900 dark:text-slate-100 truncate">${item.name}</div>
+                                        <div class="text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-0.5">
+                                            <span class="font-medium text-slate-600 dark:text-slate-300">${item.portion}</span>
+                                            <span>•</span>
+                                            <span class="text-emerald-600 dark:text-emerald-400">חלבון: ${item.pro}ג׳</span>
+                                            <span class="text-amber-600 dark:text-amber-400">פחמימה: ${item.carb}ג׳</span>
+                                            <span class="text-rose-600 dark:text-rose-400">שומן: ${item.fat}ג׳</span>
+                                        </div>
+                                    </div>
+
+                                    <div class="flex items-center gap-2 shrink-0">
+                                        <span class="font-extrabold text-sm text-slate-800 dark:text-slate-200 bg-white dark:bg-slate-900 px-2.5 py-1 rounded-xl border border-slate-200/70 dark:border-slate-700">
+                                            ${item.cal} <span class="text-[10px] font-normal text-slate-400">קק״ל</span>
+                                        </span>
+
+                                        <button onclick="duplicateEntryInMeal('${mealDef.key}', '${item.id}')" title="שכפל מנה" class="p-1.5 rounded-xl text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-white dark:hover:bg-slate-900 transition">
+                                            <i data-lucide="copy" class="w-4 h-4"></i>
+                                        </button>
+
+                                        <button onclick="removeEntryFromMeal('${mealDef.key}', '${item.id}')" title="הסר פריט" class="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-white dark:hover:bg-slate-900 transition">
+                                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        /**************************************************************
+         * 8. TARGETS & BMR / TDEE CALCULATOR MODAL
+         **************************************************************/
+        function openTargetsModal() {
+            document.getElementById('inputTargetCalories').value = state.targets.calories;
+            document.getElementById('inputTargetProtein').value = state.targets.protein;
+            document.getElementById('inputTargetCarbs').value = state.targets.carbs;
+            document.getElementById('inputTargetFat').value = state.targets.fat;
+            document.getElementById('targetsModal').classList.remove('hidden');
+        }
+
+        function closeTargetsModal() {
+            document.getElementById('targetsModal').classList.add('hidden');
+        }
+
+        function applyGoalPreset(type) {
+            if (type === 'cut') {
+                document.getElementById('inputTargetCalories').value = 1800;
+                document.getElementById('inputTargetProtein').value = 165;
+                document.getElementById('inputTargetCarbs').value = 145;
+                document.getElementById('inputTargetFat').value = 60;
+                state.targets.presetLabel = 'חיטוב וירידה';
+            } else if (type === 'maintain') {
+                document.getElementById('inputTargetCalories').value = 2200;
+                document.getElementById('inputTargetProtein').value = 160;
+                document.getElementById('inputTargetCarbs').value = 230;
+                document.getElementById('inputTargetFat').value = 70;
+                state.targets.presetLabel = 'מאזן ניטרלי';
+            } else if (type === 'bulk') {
+                document.getElementById('inputTargetCalories').value = 2800;
+                document.getElementById('inputTargetProtein').value = 180;
+                document.getElementById('inputTargetCarbs').value = 335;
+                document.getElementById('inputTargetFat').value = 82;
+                state.targets.presetLabel = 'עלייה במסה';
+            }
+            showToast('ערכי התבנית הוזנו - לחץ "שמור יעדים" לאישור');
+        }
+
+        function calculateSmartTDEE() {
+            const gender = document.getElementById('calcGender').value;
+            const age = parseFloat(document.getElementById('calcAge').value) || 28;
+            const weight = parseFloat(document.getElementById('calcWeight').value) || 75;
+            const height = parseFloat(document.getElementById('calcHeight').value) || 175;
+            const activity = parseFloat(document.getElementById('calcActivity').value) || 1.55;
+            const goal = document.getElementById('calcGoalType').value;
+
+            // Mifflin-St Jeor Equation
+            let bmr = (10 * weight) + (6.25 * height) - (5 * age);
+            bmr += (gender === 'male') ? 5 : -161;
+
+            let tdee = Math.round(bmr * activity);
+            let targetCalories = tdee;
+
+            if (goal === 'cut') {
+                targetCalories = Math.max(1200, tdee - 450);
+                state.targets.presetLabel = 'חיטוב מותאם אישית';
+            } else if (goal === 'bulk') {
+                targetCalories = tdee + 350;
+                state.targets.presetLabel = 'מסה מותאמת אישית';
+            } else {
+                state.targets.presetLabel = 'ניטרלי מותאם אישית';
+            }
+
+            // High-protein fitness macro split: 2.1g protein/kg, 0.9g fat/kg, remainder carbs
+            const proteinGrams = Math.round(weight * 2.1);
+            const fatGrams = Math.round(weight * 0.9);
+            const remainingCals = Math.max(0, targetCalories - (proteinGrams * 4) - (fatGrams * 9));
+            const carbsGrams = Math.round(remainingCals / 4);
+
+            document.getElementById('inputTargetCalories').value = targetCalories;
+            document.getElementById('inputTargetProtein').value = proteinGrams;
+            document.getElementById('inputTargetCarbs').value = carbsGrams;
+            document.getElementById('inputTargetFat').value = fatGrams;
+
+            showToast(`חושב יעד של ${targetCalories} קק״ל לפי הנתונים שלך!`);
+        }
+
+        function saveDailyTargets() {
+            const cal = parseInt(document.getElementById('inputTargetCalories').value) || 2200;
+            const pro = parseInt(document.getElementById('inputTargetProtein').value) || 160;
+            const carb = parseInt(document.getElementById('inputTargetCarbs').value) || 220;
+            const fat = parseInt(document.getElementById('inputTargetFat').value) || 70;
+
+            state.targets.calories = cal;
+            state.targets.protein = pro;
+            state.targets.carbs = carb;
+            state.targets.fat = fat;
+
+            saveStateToStorage();
+            renderAll();
+            closeTargetsModal();
+            showToast('היעדים היומיים עודכנו בהצלחה!');
+        }
+
+        /**************************************************************
+         * 9. RESET DAY & DEMO MENU LOADER
+         **************************************************************/
+        function openResetModal() {
+            document.getElementById('resetModal').classList.remove('hidden');
+        }
+
+        function closeResetModal() {
+            document.getElementById('resetModal').classList.add('hidden');
+        }
+
+        function confirmResetDay() {
+            state.meals = {
+                breakfast: [],
+                lunch: [],
+                dinner: [],
+                snacks: []
+            };
+            saveStateToStorage();
+            renderAll();
+            closeResetModal();
+            showToast('הרישום היומי אופס בהצלחה');
+        }
+
+        function loadDemoDay() {
+            state.meals = {
+                breakfast: [
+                    { id: 'd1', name: 'שיבולת שועל (קוואקר)', portion: '50 גרם', cal: 190, pro: 6.6, carb: 33.9, fat: 3.3 },
+                    { id: 'd2', name: 'יוגורט חלבון (PRO / GO)', portion: '1 יח׳ (200 גרם)', cal: 152, pro: 21.0, carb: 10.4, fat: 2.8 },
+                    { id: 'd3', name: 'חמאת בוטנים טבעית', portion: '1 יח׳ (20 גרם)', cal: 118, pro: 5.0, carb: 4.0, fat: 10.0 }
+                ],
+                lunch: [
+                    { id: 'd4', name: 'חזה עוף צלוי', portion: '180 גרם', cal: 297, pro: 55.8, carb: 0, fat: 6.5 },
+                    { id: 'd5', name: 'אורז לבן מבושל', portion: '200 גרם', cal: 260, pro: 5.4, carb: 56.4, fat: 0.6 },
+                    { id: 'd6', name: 'שמן זית כתית מעולה', portion: '1 יח׳ (10 גרם)', cal: 88, pro: 0, carb: 0, fat: 10.0 },
+                    { id: 'd7', name: 'עגבניות שרי', portion: '100 גרם', cal: 18, pro: 0.9, carb: 3.9, fat: 0.2 }
+                ],
+                dinner: [
+                    { id: 'd8', name: 'ביצה שלמה (L)', portion: '2 יח׳ (120 גרם)', cal: 172, pro: 15.1, carb: 0.8, fat: 11.4 },
+                    { id: 'd9', name: 'קוטג׳ 5%', portion: '125 גרם', cal: 119, pro: 13.8, carb: 1.9, fat: 6.3 },
+                    { id: 'd10', name: 'לחם קל / מלא', portion: '2 יח׳ (56 גרם)', cal: 118, pro: 5.5, carb: 20.2, fat: 1.3 },
+                    { id: 'd11', name: 'אבוקדו טרי', portion: '60 גרם', cal: 96, pro: 1.2, carb: 5.1, fat: 8.8 }
+                ],
+                snacks: [
+                    { id: 'd12', name: 'סקופ אבקת חלבון (מי גבינה)', portion: '1 יח׳ (32 גרם)', cal: 123, pro: 25.0, carb: 2.1, fat: 1.7 },
+                    { id: 'd13', name: 'בננה', portion: '1 יח׳ (115 גרם)', cal: 102, pro: 1.3, carb: 26.2, fat: 0.3 }
+                ]
+            };
+            saveStateToStorage();
+            renderAll();
+            showToast('נטען תפריט יומי עשיר לדוגמה!');
+        }
+
+        /**************************************************************
+         * 10. TOAST NOTIFICATIONS
+         **************************************************************/
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const bgClass = type === 'error'
+                ? 'bg-rose-600 text-white'
+                : 'bg-slate-900 dark:bg-indigo-600 text-white';
+
+            toast.className = `${bgClass} px-4 py-2.5 rounded-2xl shadow-xl text-xs sm:text-sm font-bold flex items-center gap-2 animate-fade-in pointer-events-auto`;
+            toast.innerHTML = `
+                <span>${type === 'error' ? '⚠️' : '✅'}</span>
+                <span>${message}</span>
+            `;
+            container.appendChild(toast);
+
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transition = 'opacity 0.3s ease';
+                setTimeout(() => toast.remove(), 300);
+            }, 2600);
+        }
+    </script>
+</body>
+</html>
