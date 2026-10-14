@@ -6,9 +6,13 @@
     
     <!-- PWA / Mobile App Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="תזונה יומית">
     <meta name="theme-color" content="#0f172a">
+    
+    <!-- Embedded Web App Manifest for Persistent iOS Storage -->
+    <link rel="manifest" href='data:application/manifest+json,{"name":"מחשבון ויומן תזונה","short_name":"תזונה יומית","display":"standalone","background_color":"#f1f5f9","theme_color":"#0f172a","dir":"rtl","lang":"he"}'>
     
     <title>מעקב תזונה ויומן מתקדם</title>
     <script src="https://cdn.tailwindcss.com"></script>
@@ -27,7 +31,6 @@
             transform: rotate(-90deg);
             transform-origin: 50% 50%;
         }
-        /* Hide scrollbars for horizontal scroll areas */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
     </style>
@@ -41,7 +44,10 @@
                 <div class="flex items-center gap-2">
                     <span class="text-2xl">🥗</span>
                     <div>
-                        <h1 class="text-lg font-bold leading-tight">מחשבון ויומן תזונה</h1>
+                        <div class="flex items-center gap-2">
+                            <h1 class="text-lg font-bold leading-tight">מחשבון ויומן תזונה</h1>
+                            <span id="save-status" class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-medium">נשמר אוטומטית ✓</span>
+                        </div>
                         <p class="text-xs text-slate-400">מעקב יומי, חודשי ושנתי</p>
                     </div>
                 </div>
@@ -53,6 +59,11 @@
                         ⚡ יום לדוגמה
                     </button>
                 </div>
+            </div>
+
+            <!-- Storage Warning Banner (Shown only if Private Browsing blocks storage) -->
+            <div id="storage-warning" class="hidden bg-rose-600 text-white text-xs p-2.5 rounded-xl mb-2 font-medium">
+                ⚠️ שים לב: הדפדפן שלך במצב "גלישה פרטית" או חוסם שמירת נתונים. צא ממצב פרטי ב-Safari כדי שהנתונים יישמרו קבוע.
             </div>
 
             <!-- Navigation Tabs (Daily / Monthly / Yearly) -->
@@ -155,7 +166,7 @@
                         <div class="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2">
                             <div class="flex items-center gap-2">
                                 <label class="text-xs font-semibold text-slate-600">⚖️ משקל יומי (ק"ג):</label>
-                                <input type="number" step="0.1" id="daily-weight" onchange="saveDailyWeight(this.value)" placeholder="למשל 75.5" class="w-24 px-2.5 py-1 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-center font-bold">
+                                <input type="number" step="0.1" id="daily-weight" oninput="saveDailyWeight(this.value)" placeholder="למשל 75.5" class="w-24 px-2.5 py-1 text-sm border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-center font-bold">
                             </div>
                             <div class="flex gap-2">
                                 <button onclick="copyFromYesterday()" class="text-xs bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-lg font-medium transition">
@@ -273,8 +284,6 @@
         <!-- VIEW 2: MONTHLY CALENDAR                   -->
         <!-- ========================================== -->
         <div id="view-monthly" class="hidden space-y-5">
-            
-            <!-- Month Selector & Monthly Summary -->
             <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
                 <div class="flex justify-between items-center mb-4">
                     <button onclick="changeMonth(-1)" class="p-2 hover:bg-slate-100 rounded-xl font-bold text-slate-600">◀ חודש קודם</button>
@@ -282,7 +291,6 @@
                     <button onclick="changeMonth(1)" class="p-2 hover:bg-slate-100 rounded-xl font-bold text-slate-600">חודש הבא ▶</button>
                 </div>
 
-                <!-- Monthly Stats Cards -->
                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 text-center">
                     <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
                         <span class="text-xs text-slate-500 block">ימים מתועדים</span>
@@ -302,7 +310,6 @@
                     </div>
                 </div>
 
-                <!-- Legend -->
                 <div class="flex flex-wrap gap-3 justify-center text-xs text-slate-600 mb-3 pb-3 border-b border-slate-100">
                     <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block"></span> עמידה ביעד (±10%)</span>
                     <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-amber-400 inline-block"></span> מתחת ליעד</span>
@@ -310,15 +317,11 @@
                     <span class="flex items-center gap-1"><span class="w-3 h-3 rounded-full bg-slate-200 inline-block"></span> ללא דיווח</span>
                 </div>
 
-                <!-- Days of Week Header -->
                 <div class="grid grid-cols-7 gap-1.5 text-center text-xs font-bold text-slate-500 mb-2">
                     <div>א'</div><div>ב'</div><div>ג'</div><div>ד'</div><div>ה'</div><div>ו'</div><div>ש'</div>
                 </div>
 
-                <!-- Calendar Grid -->
-                <div id="calendar-grid" class="grid grid-cols-7 gap-1.5">
-                    <!-- Populated by JS -->
-                </div>
+                <div id="calendar-grid" class="grid grid-cols-7 gap-1.5"></div>
             </div>
         </div>
 
@@ -333,7 +336,6 @@
                     <button onclick="changeYear(1)" class="p-2 hover:bg-slate-100 rounded-xl font-bold text-slate-600">שנה הבאה ▶</button>
                 </div>
 
-                <!-- Yearly Summary Banner -->
                 <div class="grid grid-cols-3 gap-3 mb-6 text-center">
                     <div class="bg-slate-50 p-3 rounded-xl border border-slate-100">
                         <span class="text-xs text-slate-500 block">סה"כ ימים מתועדים השנה</span>
@@ -349,13 +351,9 @@
                     </div>
                 </div>
 
-                <!-- 12 Months Grid -->
-                <div id="yearly-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                    <!-- Populated by JS -->
-                </div>
+                <div id="yearly-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"></div>
             </div>
 
-            <!-- Backup & Restore Section (Important for long-term local storage) -->
             <div class="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <div>
                     <h3 class="text-sm font-bold text-slate-800">💾 גיבוי ושחזור נתונים</h3>
@@ -385,7 +383,6 @@
                 <button onclick="closeGoalsModal()" class="text-slate-400 hover:text-slate-600 text-xl font-bold">&times;</button>
             </div>
 
-            <!-- BMR Calculator -->
             <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 space-y-3">
                 <div class="text-xs font-bold text-slate-700">חישוב אוטומטי לפי נתונים אישיים:</div>
                 <div class="grid grid-cols-2 gap-2 text-xs">
@@ -410,7 +407,6 @@
                 </div>
             </div>
 
-            <!-- Manual Inputs -->
             <div class="space-y-2 text-sm">
                 <div>
                     <label class="text-xs text-slate-500">יעד קלוריות יומי</label>
@@ -443,7 +439,6 @@
         // 1. BUILT-IN ISRAELI & FITNESS FOOD DB
         // ==========================================
         const defaultFoods = [
-            // Protein & Meat
             { id: 'f1', name: 'חזה עוף צלוי / נינג׳ה', cat: 'protein', cal: 165, pro: 31, carb: 0, fat: 3.6, unitName: 'נתח בינוני', unitWeight: 150 },
             { id: 'f2', name: 'פילה סלמון אפוי', cat: 'protein', cal: 208, pro: 20, carb: 0, fat: 13, unitName: 'פילה', unitWeight: 180 },
             { id: 'f3', name: 'בקר רזה מבושל (פילה מדומה / סינטה)', cat: 'protein', cal: 200, pro: 28, carb: 0, fat: 9, unitName: 'מנה', unitWeight: 150 },
@@ -451,7 +446,6 @@
             { id: 'f5', name: 'אבקת חלבון (Whey)', cat: 'protein', cal: 390, pro: 78, carb: 8, fat: 5, unitName: 'סקופ', unitWeight: 32 },
             { id: 'f6', name: 'פסטרמה דלת שומן', cat: 'protein', cal: 105, pro: 20, carb: 2, fat: 2, unitName: 'פרוסה', unitWeight: 25 },
 
-            // Dairy & Eggs
             { id: 'd1', name: 'ביצה שלמה (L)', cat: 'dairy', cal: 143, pro: 12.6, carb: 0.7, fat: 9.5, unitName: 'יחידה', unitWeight: 60 },
             { id: 'd2', name: 'חלבון ביצה (לבן בלבד)', cat: 'dairy', cal: 52, pro: 11, carb: 0.7, fat: 0.2, unitName: 'יחידה', unitWeight: 35 },
             { id: 'd3', name: 'קוטג׳ 5% (תנובה/שטראוס)', cat: 'dairy', cal: 95, pro: 11, carb: 1.5, fat: 5, unitName: 'גביע שלם', unitWeight: 250 },
@@ -460,7 +454,6 @@
             { id: 'd6', name: 'גבינה צהובה 9%', cat: 'dairy', cal: 205, pro: 32, carb: 0.5, fat: 9, unitName: 'פרוסה', unitWeight: 25 },
             { id: 'd7', name: 'גלידת חלבון ביתית (Ninja CREAMi)', cat: 'dairy', cal: 85, pro: 11, carb: 7, fat: 1.5, unitName: 'מיכל שלם (450ג׳)', unitWeight: 450 },
 
-            // Carbs & Grains
             { id: 'c1', name: 'אורז לבן מבושל', cat: 'carbs', cal: 130, pro: 2.7, carb: 28, fat: 0.3, unitName: 'כוס מבושלת', unitWeight: 160 },
             { id: 'c2', name: 'בטטה אפויה', cat: 'carbs', cal: 90, pro: 2, carb: 21, fat: 0.1, unitName: 'יחידה בינונית', unitWeight: 180 },
             { id: 'c3', name: 'שיבולת שועל (קוואקר יבש)', cat: 'carbs', cal: 380, pro: 13, carb: 67, fat: 6.5, unitName: 'כף גדושה', unitWeight: 15 },
@@ -469,7 +462,6 @@
             { id: 'c6', name: 'בננה', cat: 'carbs', cal: 89, pro: 1.1, carb: 23, fat: 0.3, unitName: 'יחידה בינונית', unitWeight: 115 },
             { id: 'c7', name: 'פסטה מבושלת', cat: 'carbs', cal: 155, pro: 5.5, carb: 31, fat: 0.9, unitName: 'כוס מבושלת', unitWeight: 150 },
 
-            // Fats & Veggies
             { id: 'v1', name: 'טחינה גולמית', cat: 'fats', cal: 650, pro: 24, carb: 10, fat: 60, unitName: 'כף', unitWeight: 15 },
             { id: 'v2', name: 'שמן זית', cat: 'fats', cal: 884, pro: 0, carb: 0, fat: 100, unitName: 'כף', unitWeight: 10 },
             { id: 'v3', name: 'אבוקדו', cat: 'fats', cal: 160, pro: 2, carb: 8.5, fat: 15, unitName: 'חצי אבוקדו', unitWeight: 75 },
@@ -488,16 +480,15 @@
         const hebrewDays = ['יום ראשון', 'יום שני', 'יום שלישי', 'יום רביעי', 'יום חמישי', 'יום שישי', 'יום שבת'];
 
         // ==========================================
-        // 2. STATE & STORAGE MANAGEMENT
+        // 2. TRIPLE-REDUNDANT STORAGE (localStorage + IndexedDB + window.name)
         // ==========================================
         let currentDateStr = getLocalTodayStr();
         let currentCalendarYear = new Date().getFullYear();
-        let currentCalendarMonth = new Date().getMonth(); // 0-11
+        let currentCalendarMonth = new Date().getMonth();
         let selectedCategory = 'all';
 
         let goals = { cal: 2200, pro: 165, carb: 220, fat: 70 };
         let customFoods = [];
-        // historyLogs format: { "YYYY-MM-DD": { meals: { breakfast:[], lunch:[], dinner:[], snacks:[] }, weight: null } }
         let historyLogs = {};
 
         function getLocalTodayStr() {
@@ -515,29 +506,129 @@
             };
         }
 
-        function loadState() {
-            const savedGoals = localStorage.getItem('nutri_goals_v2');
-            if (savedGoals) goals = JSON.parse(savedGoals);
+        // Request persistent storage on iOS/Android
+        if (navigator.storage && navigator.storage.persist) {
+            navigator.storage.persist();
+        }
 
-            const savedCustom = localStorage.getItem('nutri_custom_foods_v2');
-            if (savedCustom) customFoods = JSON.parse(savedCustom);
+        // IndexedDB Helper for iOS Home Screen Web Apps
+        function openIDB() {
+            return new Promise((resolve, reject) => {
+                if (!window.indexedDB) return reject('No IDB');
+                const req = indexedDB.open('NutriTrackerDB', 1);
+                req.onupgradeneeded = e => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('state')) {
+                        db.createObjectStore('state');
+                    }
+                };
+                req.onsuccess = e => resolve(e.target.result);
+                req.onerror = e => reject(e);
+            });
+        }
 
-            const savedHistory = localStorage.getItem('nutri_history_v2');
-            if (savedHistory) {
-                historyLogs = JSON.parse(savedHistory);
-            } else {
-                // Migrate legacy single-day data if exists
-                const oldMeals = localStorage.getItem('nutri_meals');
-                if (oldMeals) {
-                    historyLogs[currentDateStr] = { meals: JSON.parse(oldMeals), weight: '' };
-                    saveHistory();
-                }
+        async function saveToIDB(payload) {
+            try {
+                const db = await openIDB();
+                const tx = db.transaction('state', 'readwrite');
+                tx.objectStore('state').put(payload, 'appState');
+            } catch (e) {}
+        }
+
+        async function loadFromIDB() {
+            try {
+                const db = await openIDB();
+                return new Promise(resolve => {
+                    const tx = db.transaction('state', 'readonly');
+                    const req = tx.objectStore('state').get('appState');
+                    req.onsuccess = () => resolve(req.result || null);
+                    req.onerror = () => resolve(null);
+                });
+            } catch (e) {
+                return null;
             }
         }
 
-        function saveHistory() {
-            localStorage.setItem('nutri_history_v2', JSON.stringify(historyLogs));
+        function flashSaveIndicator() {
+            const el = document.getElementById('save-status');
+            if (!el) return;
+            el.textContent = 'נשמר כעת ✓';
+            el.className = 'text-[10px] bg-emerald-500 text-white px-2 py-0.5 rounded-full font-bold transition';
+            setTimeout(() => {
+                el.textContent = 'נשמר אוטומטית ✓';
+                el.className = 'text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full font-medium transition';
+            }, 1200);
         }
+
+        function saveAllData() {
+            const payload = { goals, customFoods, historyLogs, updatedAt: Date.now() };
+            try {
+                localStorage.setItem('nutri_goals_v2', JSON.stringify(goals));
+                localStorage.setItem('nutri_custom_foods_v2', JSON.stringify(customFoods));
+                localStorage.setItem('nutri_history_v2', JSON.stringify(historyLogs));
+                localStorage.setItem('nutri_master_v3', JSON.stringify(payload));
+            } catch (err) {
+                document.getElementById('storage-warning').classList.remove('hidden');
+            }
+            saveToIDB(payload);
+            flashSaveIndicator();
+        }
+
+        async function initAppState() {
+            // Test if localStorage is blocked (e.g. strict Private Mode)
+            try {
+                localStorage.setItem('__test', '1');
+                localStorage.removeItem('__test');
+            } catch (e) {
+                document.getElementById('storage-warning').classList.remove('hidden');
+            }
+
+            let loaded = false;
+
+            // 1. Try localStorage first
+            try {
+                const master = localStorage.getItem('nutri_master_v3');
+                if (master) {
+                    const parsed = JSON.parse(master);
+                    if (parsed.goals) goals = parsed.goals;
+                    if (parsed.customFoods) customFoods = parsed.customFoods;
+                    if (parsed.historyLogs) historyLogs = parsed.historyLogs;
+                    loaded = true;
+                } else {
+                    const savedGoals = localStorage.getItem('nutri_goals_v2');
+                    if (savedGoals) goals = JSON.parse(savedGoals);
+
+                    const savedCustom = localStorage.getItem('nutri_custom_foods_v2');
+                    if (savedCustom) customFoods = JSON.parse(savedCustom);
+
+                    const savedHistory = localStorage.getItem('nutri_history_v2');
+                    if (savedHistory) {
+                        historyLogs = JSON.parse(savedHistory);
+                        loaded = true;
+                    }
+                }
+            } catch (e) {}
+
+            // 2. Fallback to IndexedDB if localStorage was wiped by iOS
+            if (!loaded || Object.keys(historyLogs).length === 0) {
+                const idbData = await loadFromIDB();
+                if (idbData) {
+                    if (idbData.goals) goals = idbData.goals;
+                    if (idbData.customFoods) customFoods = idbData.customFoods;
+                    if (idbData.historyLogs) historyLogs = idbData.historyLogs;
+                    saveAllData();
+                }
+            }
+
+            renderFoodList();
+            renderDailyView();
+        }
+
+        // Ensure state is saved when switching apps or closing on iPhone
+        window.addEventListener('pagehide', saveAllData);
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'hidden') saveAllData();
+        });
 
         function getDayLog(dateStr) {
             if (!historyLogs[dateStr]) {
@@ -618,7 +709,6 @@
         }
 
         function renderDailyView() {
-            // Update Date Picker & Hebrew Label
             document.getElementById('date-picker').value = currentDateStr;
             const parts = currentDateStr.split('-').map(Number);
             const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
@@ -631,7 +721,6 @@
 
             const totals = calculateDayTotals(currentDateStr);
 
-            // Update Dashboard Numbers
             document.getElementById('total-cal').textContent = totals.cal;
             document.getElementById('goal-cal').textContent = goals.cal;
             document.getElementById('total-pro').textContent = totals.pro;
@@ -641,7 +730,6 @@
             document.getElementById('total-fat').textContent = totals.fat;
             document.getElementById('goal-fat').textContent = goals.fat;
 
-            // Update Ring
             const circumference = 465;
             const pctCal = Math.min(totals.cal / Math.max(goals.cal, 1), 1);
             const ring = document.getElementById('cal-ring');
@@ -661,12 +749,10 @@
                 ring.classList.add('text-rose-500');
             }
 
-            // Update Macro Bars
             document.getElementById('bar-pro').style.width = `${Math.min((totals.pro / goals.pro) * 100, 100)}%`;
             document.getElementById('bar-carb').style.width = `${Math.min((totals.carb / goals.carb) * 100, 100)}%`;
             document.getElementById('bar-fat').style.width = `${Math.min((totals.fat / goals.fat) * 100, 100)}%`;
 
-            // Render Meals Cards
             const container = document.getElementById('meals-container');
             container.innerHTML = '';
 
@@ -717,7 +803,7 @@
         function saveDailyWeight(val) {
             const dayLog = getDayLog(currentDateStr);
             dayLog.weight = val ? parseFloat(val) : '';
-            saveHistory();
+            saveAllData();
         }
 
         function copyFromYesterday() {
@@ -732,14 +818,14 @@
             }
             const dayLog = getDayLog(currentDateStr);
             dayLog.meals = JSON.parse(JSON.stringify(historyLogs[yStr].meals));
-            saveHistory();
+            saveAllData();
             renderDailyView();
         }
 
         function clearCurrentDay() {
             if (!confirm('האם לאפס את כל הארוחות ביום זה?')) return;
             historyLogs[currentDateStr] = createEmptyDay();
-            saveHistory();
+            saveAllData();
             renderDailyView();
         }
 
@@ -837,14 +923,14 @@
             const mealKey = document.getElementById('meal-select').value;
             const dayLog = getDayLog(currentDateStr);
             dayLog.meals[mealKey].push(item);
-            saveHistory();
+            saveAllData();
             renderDailyView();
         }
 
         function removeFoodItem(mealKey, idx) {
             const dayLog = getDayLog(currentDateStr);
             dayLog.meals[mealKey].splice(idx, 1);
-            saveHistory();
+            saveAllData();
             renderDailyView();
         }
 
@@ -871,7 +957,7 @@
                 unitName, unitWeight
             };
             customFoods.push(newFood);
-            localStorage.setItem('nutri_custom_foods_v2', JSON.stringify(customFoods));
+            saveAllData();
             setCategory('custom');
             document.getElementById('custom-food-form').classList.add('hidden');
         }
@@ -896,10 +982,9 @@
             const grid = document.getElementById('calendar-grid');
             grid.innerHTML = '';
 
-            const firstDay = new Date(currentCalendarYear, currentCalendarMonth, 1).getDay(); // 0 (Sun) - 6 (Sat)
+            const firstDay = new Date(currentCalendarYear, currentCalendarMonth, 1).getDay();
             const daysInMonth = new Date(currentCalendarYear, currentCalendarMonth + 1, 0).getDate();
 
-            // Empty slots before 1st of month
             for (let i = 0; i < firstDay; i++) {
                 const empty = document.createElement('div');
                 empty.className = "h-20 sm:h-24 bg-slate-50/50 rounded-xl";
@@ -959,7 +1044,6 @@
                 grid.appendChild(cell);
             }
 
-            // Update Monthly Stats
             document.getElementById('m-stat-days').textContent = `${loggedDaysCount} / ${daysInMonth}`;
             document.getElementById('m-stat-cal').textContent = loggedDaysCount ? Math.round(sumCal / loggedDaysCount) : 0;
             document.getElementById('m-stat-pro').textContent = loggedDaysCount ? `${Math.round(sumPro / loggedDaysCount)} גר'` : '0 גר\'';
@@ -994,7 +1078,7 @@
 
             for (let m = 0; m < 12; m++) {
                 const daysInMonth = new Date(currentCalendarYear, m + 1, 0).getDate();
-                let mDays = 0, mCal = 0, mPro = 0, mOnTarget = 0;
+                let mDays = 0, mCal = 0, mPro = 0;
 
                 for (let d = 1; d <= daysInMonth; d++) {
                     const dateStr = `${currentCalendarYear}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
@@ -1003,7 +1087,6 @@
                         mDays++;
                         mCal += t.cal;
                         mPro += t.pro;
-                        if (t.cal >= goals.cal * 0.88 && t.cal <= goals.cal * 1.10) mOnTarget++;
                     }
                 }
 
@@ -1096,7 +1179,7 @@
                 carb: parseInt(document.getElementById('input-goal-carb').value) || 200,
                 fat: parseInt(document.getElementById('input-goal-fat').value) || 65
             };
-            localStorage.setItem('nutri_goals_v2', JSON.stringify(goals));
+            saveAllData();
             closeGoalsModal();
             renderDailyView();
         }
@@ -1122,7 +1205,7 @@
                     { name: 'גלידת חלבון ביתית (Ninja CREAMi)', amountDesc: '1 מיכל שלם (450ג׳)', cal: 382, pro: 49.5, carb: 31.5, fat: 6.8 }
                 ]
             };
-            saveHistory();
+            saveAllData();
             renderDailyView();
         }
 
@@ -1146,9 +1229,7 @@
                     if (data.goals) goals = data.goals;
                     if (data.customFoods) customFoods = data.customFoods;
                     if (data.historyLogs) historyLogs = data.historyLogs;
-                    localStorage.setItem('nutri_goals_v2', JSON.stringify(goals));
-                    localStorage.setItem('nutri_custom_foods_v2', JSON.stringify(customFoods));
-                    saveHistory();
+                    saveAllData();
                     alert('הנתונים שוחזרו בהצלחה!');
                     renderDailyView();
                 } catch (err) {
@@ -1158,10 +1239,8 @@
             reader.readAsText(file);
         }
 
-        // Initialize App
-        loadState();
-        renderFoodList();
-        renderDailyView();
+        // Start App
+        initAppState();
     </script>
 </body>
 </html>
